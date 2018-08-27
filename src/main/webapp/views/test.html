@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,
+minimum-scale=0.5, maximum-scale=2.0, user-scalable=yes" />
+    <title></title>
+    <script type="text/javascript" src="../js/angular.min.js" ></script>
+    <script type="text/javascript" src="../js/jquery-1.11.1.min.js" ></script>
+    <style>
+        th,td{
+            width: 80px;
+            text-align: center;
+        }
+        /**定义两个颜色样式**/
+        .yellow{
+            background-color: yellow;
+        }
+        .red{
+            background-color: red;
+        }
+    </style>
+</head>
+<body ng-app="myApp" ng-controller="myCtrl">
+<center>
+    <div>查询：<input type="text"  ng-model="seacherKey"/>
+        排序：<select ng-model="orderKey">
+            <option value="">--请选择--</option>
+            <option value="name">名称正序</option>
+            <option value="-name">名称倒序</option>
+            <option value="price">价钱正序</option>
+            <option value="-price">价钱倒序</option>
+        </select>
+        <!--是否显示添加区域的快关，，，showAdd=!showAdd 表示 逆操作-->
+        <input type="button" value="入库/增加" ng-click="showAdd=!showAdd"/>
+    </div>
+    <br />
+    <div ng-show="showAdd">
+        商品名称：<input type="text" placeholder="请输入商品名称" ng-model="name"/><br />
+        商品价钱：<input type="number" placeholder="请输入商品价钱" ng-model="price"/><br />
+        商品产地：<input type="text" placeholder="请输入商品产地" ng-model="product"/><br />
+        <input type="button" value="添加" ng-click="addGood();"/>
+    </div>
+    <br />
+    <div style="margin-right: 10px;">
+        <input type="button" value="批量删除" ng-click="deleteMore();"/></div>
+    <br />
+    <table ng-show="showTable" border="1px" bordercolor="green" cellpadding="0px" cellspacing="0px">
+        <tr style="background-color: gray;">
+            <th><input type="checkbox" ng-model="checkAll"/></th>
+            <th>序号</th>
+            <th>id</th>
+            <th>商品名称</th>
+            <th>价钱</th>
+            <th ng-click="orderKey='product'">产地</th>
+            <th style="width: 110px;">操作</th>
+        </tr>
+        <!--下一行注释的部分：只对 name进行过滤查询-->
+        <!--<tr ng-repeat="g in goods | filter:{name:seacherKey} " class="{{$index%2? 'yellow':'red'}}" >-->
+        <tr ng-repeat="g in goods | filter:seacherKey | orderBy:orderKey " class="{{$index%2 ? 'yellow':'red'}}" >
+            <td><input type="checkbox" value="{{$index}}" ng-model="checkAll"/></td>
+            <td>{{$index}}</td><!--系统自动索引-->
+            <td>{{g.id}}</td>
+            <td>{{g.name}}</td>
+            <td>{{g.price}}</td>
+            <td>{{g.product}}</td>
+            <td >
+                <input type="button" value="删除" ng-click="deleteGood($index);"/>
+                <input type="button" value="修改" ng-click="showGood($index);"/>
+            </td>
+        </tr>
+    </table>
+    <br />
+    <div ng-show="showUpdate">
+        商品名称：<input type="text" ng-model="upname"/><br />
+        商品价钱：<input type="number" ng-model="upprice"/><br />
+        商品产地：<input type="text" ng-model="upproduct"/><br /><br />
+        <input type="button" value="提交修改" ng-click="updateGood();"/>
+    </div>
+    <br />
+    <p>{{goods}}</p>
+</center>
+
+
+<script>
+    var app = angular.module("myApp",[]);
+    app.controller("myCtrl",function($scope){
+        $scope.goods = [{"id":1,"name":"小米5","price":1600,"product":"北京"},
+            {"id":2,"name":"华为p10","price":4200,"product":"东莞"},
+            {"id":3,"name":"vivox20","price":2600,"product":"佛山"}];
+        //查询关键字
+        $scope.seacherKey = "";
+        //排序关键字
+        $scope.orderKey = "";
+        //全选复选框的绑定字段
+        $scope.checkAll = false;
+        //显示添加模块，，默认不显示
+        $scope.showAdd = false;
+
+        //创建和新增商品信息相绑定的字段属性
+        $scope.name = "";
+        $scope.price = "";
+        $scope.product = "";
+        //添加按钮的点击事件
+        $scope.addGood = function(){
+            var good = {};
+            good.name = $scope.name;//把输入的商品名称给 good对象
+            good.price = $scope.price;
+            good.product = $scope.product;
+            //把good添加到  goods数组中，数据源
+            $scope.goods.push(good);
+            //隐藏添加区域
+            $scope.showAdd = false;
+            //显示table
+            $scope.showTable = true;
+        }
+
+        //控制table是否显示的属性
+        $scope.showTable = true;
+        //删除
+        $scope.deleteGood = function(gname){
+            $scope.goods.splice(gname,1);//从$index开始，删除1条
+            //遍历数组，找到要删除的商品
+//					for(var i=0;i<$scope.goods.length;i++){
+//						if($scope.goods[i].name == gname){//遍历得到的商品信息就是我们要删除的，，i就是他再数组中的索引
+//							$scope.goods.splice(i,1);
+//							break;//删除后跳出循环
+//						}
+//					}
+            //如果删光了，隐藏table的头
+            if($scope.goods.length == 0){
+                $scope.showTable = false;//隐藏
+            }
+        }
+
+        //是否显示修改回显区域
+        $scope.showUpdate = false;
+//				$scope.upIndex = "";
+        //定义接收修改信息的字段
+        $scope.upname = "";
+        $scope.upprice = "";
+        $scope.upproduct = "";
+
+        var updateGood = "";//要修改的商品信息
+        //修改按钮的回调
+        $scope.showGood = function(gname){//$index表示要修改的数据的索引
+            //显示修改回显区域
+            $scope.showUpdate = true;
+            //遍历数组，找到要修改的商品
+//					for(var i=0;i<$scope.goods.length;i++){
+//						if($scope.goods[i].name == gname){//i就是他再数组中的索引
+//							updateGood = $scope.goods[i];
+//							break;//找到修改的商品后，跳出循环
+//						}
+//					}
+//					updateGood = $scope.goods[gname];
+            //显示修改信息到页面，，第一步得到修改信息
+//					$scope.upname = updateGood.name;
+//					$scope.upprice = updateGood.price;
+//					$scope.upproduct = updateGood.product;
+            $scope.upname = $scope.goods[gname].name;
+            $scope.upprice = $scope.goods[gname].price;
+            $scope.upproduct = $scope.goods[gname].product;
+
+            $scope.updateGood = function(){
+                $scope.goods[gname].name = $scope.upname;//把新的名字替换旧名字
+                $scope.goods[gname].price = $scope.upprice;
+                $scope.goods[gname].product = $scope.upproduct;
+                //隐藏修改回显区域
+                $scope.showUpdate = false;
+            }
+        }
+        //提交修改
+//				$scope.updateGood = function(){
+//					updateGood.name = $scope.upname;//把新的名字替换旧名字
+//					updateGood.price = $scope.upprice;
+//					updateGood.product = $scope.upproduct;
+//					//隐藏修改回显区域
+//					$scope.showUpdate = false;
+//				}
+
+        //批量删除
+        $scope.deleteMore = function(){
+            if($scope.checkAll){//全部打钩，，全删除
+                $scope.goods = [];
+                $scope.showTable = false;
+            }else{//不是全删除
+                var checked = $("input[type=checkbox]:checked");//获得所有打钩的复选框
+                for(var i= checked.length-1;i>=0;i--){//从大往小遍历选中的复选框
+                    $scope.goods.splice(checked[i].value,1);//通过复选框中的索引，到数据源中删除数据，，从下往上删除
+                }
+            }
+        }
+
+    });
+</script>
+</body>
+</html>

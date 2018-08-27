@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bxlt.converter.mapper.TbbizShapeMapper">
+
+    <resultMap id="BaseResultMap" type="TbbizShape" />
+
+    <insert id = "insert" parameterType="com.bxlt.converter.domain.TbbizShape">
+        INSERT INTO tbbiz_shape(ID,shape,wgs84Shape) VALUES(#{id},#{shape},#{wgs84Shape});
+    </insert>
+
+    <update id="update" parameterType="com.bxlt.converter.domain.TbbizShape">
+        UPDATE tbbiz_shape SET shape=#{shape} , wgs84Shape=#{wgs84Shape}  WHERE ID=#{id}
+    </update>
+
+    <select id="find" parameterType="String" resultType="com.bxlt.converter.domain.TbbizShape">
+        SELECT ID,shape,wgs84Shape FROM tbbiz_shape WHERE ID=#{0}
+    </select>
+
+    <select id="findList" resultMap="BaseResultMap">
+        SELECT ID,shape,wgs84Shape FROM tbbiz_shape
+    </select>
+
+    <delete id="delete" parameterType="String">
+        DELETE FROM tbbiz_shape WHERE ID=#{0}
+    </delete>
+</mapper>

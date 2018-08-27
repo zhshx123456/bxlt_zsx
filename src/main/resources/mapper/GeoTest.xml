@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bxlt.converter.mapper.GeoTestMapper">
+
+    <resultMap id="BaseResultMap" type="GeoTest" />
+        <!--<result property="id" column="id"  javaType="string" jdbcType="VARCHAR"/>
+        <result property="shape" column="shape"  javaType="JGeometry" jdbcType="STRUCT"/>
+        <result property="wgs84shape" column="wgs84shape"  javaType="JGeometry" jdbcType="STRUCT"/>
+    </resultMap>-->
+
+    <insert id = "insert" parameterType="com.bxlt.converter.domain.GeoTest">
+        INSERT INTO geotest(ID,shape,wgs84shape) VALUES(#{id},#{shape},geomfromtext(#{wgs84shape}));
+        <!-- INSERT INTO geotest(ID,shape,wgs84shape)
+         VALUES(#{id},#{shape,javaType=JGeometry,jdbcType=STRUCT},#{wgs84shape,javaType=JGeometry,jdbcType=STRUCT});-->
+     </insert>
+
+     <update id="update" parameterType="com.bxlt.converter.domain.GeoTest">
+         UPDATE geotest SET shape=geomfromtext(#{shape}) , geomfromtext(#{wgs84shape})  WHERE ID=#{id}
+          <!--UPDATE geotest SET shape=#{shape} , #{wgs84shape}  WHERE ID=#{id}-->
+     </update>
+
+     <select id="find" parameterType="String" resultType="com.bxlt.converter.domain.GeoTest">
+         SELECT ID,shape,wgs84shape FROM geotest WHERE ID=#{0}
+     </select>
+
+     <select id="findList" resultMap="BaseResultMap">
+         SELECT ID,shape,wgs84shape FROM geotest
+     </select>
+
+     <delete id="delete" parameterType="String">
+         DELETE FROM geotest WHERE ID=#{0}
+     </delete>
+ </mapper>

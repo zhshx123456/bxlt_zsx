@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title>农险云图</title>
+		<link rel="stylesheet" href="../css/ol.css" />
+		<script type="text/javascript" src="../js/openlayers/ol.js"></script>
+		<script type="text/javascript" src="../js/openlayers/jquery.min.js"></script>
+		<script type="text/javascript" src="../js/openlayers/layer.js"></script>
+	</head>
+
+	<body>
+		<div id="map"></div>
+		<form class="form-inline">
+			<label>Geometry type &nbsp;</label>
+			<select id="type">
+				<option value="Point">Point</option>
+				<option value="LineString">LineString</option>
+				<option value="Polygon">Polygon</option>
+				<option value="Circle">Circle</option>
+				<option value="None">None</option>
+			</select>
+			<label>险种 &nbsp;</label>
+			<select id="categoryItem">
+				<option value="1">小麦</option>
+				<option value="2">玉米</option>
+				<option value="3">大豆</option>
+			</select>
+		</form>
+		<script>
+			var tile = {
+				moren: new ol.layer.Tile({
+					source: new ol.source.OSM()
+				}),
+				tianditu: new ol.layer.Tile({
+					source: new ol.source.XYZ({
+						url: 'http://t3.tianditu.cn/DataServer?T=cia_w&X={x}&Y={y}&L={z}' //天地图影像 标注
+					}),
+					projection: 'EPSG:3857'
+				})
+			};
+			var raster = new ol.layer.Tile({
+				source: new ol.source.OSM()
+			});
+			var source = new ol.source.Vector({
+				wrapX: false
+			});
+			var vector = new ol.layer.Vector({
+				source: source
+			});
+			var map = new ol.Map({
+				target: 'map',
+				layers: [raster, vector],
+				view: new ol.View({
+					zoom: 6,
+					center: [-11000000, 4600000],
+				})
+			});
+			var typeSelect = document.getElementById('type');
+			var value = "Point";
+			var content;
+			function drawPolygon() {
+				var polygon = new ol.interaction.Draw({
+					source: source,
+					type: value
+				});
+				polygon.on('drawend', function(evt) {
+					var feature = evt.feature;
+					var geometry = feature.getGeometry();
+					var coordinate = geometry.getCoordinates(); //多边形坐标
+					sendAjax(coordinate);
+				});
+				map.addInteraction(polygon);
+			};
+			typeSelect.onchange = function() {
+				value = typeSelect.value;
+				drawPolygon();
+			}
+			function sendAjax(coordinate) {
+				var categoryItemCode = document.getElementById('categoryItem').value;
+				$.ajax({
+					type: "get",
+					url: "http://localhost:8090/mouldAttribute/findList/" + categoryItemCode,
+                    error: function(error) {
+                        console.log(error);
+                    },
+					success: function(data) {
+						var content = "<div><form action='/createTable/test'>";
+						var params = "";
+						for(var i = 0; i < data.length; i++) {
+							params+=data[i].maName+":";
+							content += data[i].fieldexplain + "<input id='" + data[i].maName + "' name='" + data[i].maName + "'> ";
+						}
+						content +="<input hidden id='coordinate' name='coordinate' value='MULTIPOLYGON (((116.290374808 40.056097832, 116.292350428 40.057307805, 116.295634622 40.057737939, 116.297057648 40.056167049, 116.29752202 40.054927158, 116.295596364 40.054706029, 116.294048944 40.053996485, 116.291234728 40.052695451, 116.290374808 40.056097832)))'>";
+						content += "<input hidden id='params' name='params' value='"+params+"'>";
+						content += "<input type='submit' id='tijiao' name='tijiao' value='提交'>";
+						content += "</form></div>";
+						layer.open({
+							type: 1,
+							area: ['600px', '360px'],
+							shadeClose: true, //点击遮罩关闭
+							content: content
+						});
+					}
+				})
+			}
+		</script>
+	</body>
+
+</html>

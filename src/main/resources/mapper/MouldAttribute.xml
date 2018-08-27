@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bxlt.converter.mapper.MouldAttributeMapper">
+
+    <resultMap id="BaseResultMap" type="MouldAttribute" />
+
+    <insert id = "insert" parameterType="com.bxlt.converter.domain.MouldAttribute">
+        INSERT INTO mould_attribute(ID,typeId,maName,fieldtype,fieldexplain) VALUES(#{id},#{typeId},#{maName},#{fieldtype},#{fieldexplain});
+     </insert>
+
+     <update id="update" parameterType="com.bxlt.converter.domain.MouldAttribute">
+         UPDATE mould_attribute SET maName=#{maName},fieldtype=#{fieldtype},fieldexplain=#{fieldexplain}   WHERE ID=#{id}
+     </update>
+
+     <select id="find" parameterType="String" resultType="com.bxlt.converter.domain.MouldAttribute">
+         SELECT ID,typeId,maName,fieldtype,fieldexplain FROM mould_attribute WHERE ID=#{0}
+     </select>
+
+     <select id="findList" resultMap="BaseResultMap">
+         SELECT maName,fieldtype,fieldexplain FROM mould_attribute where typeId=#{0}
+     </select>
+
+     <delete id="delete" parameterType="String">
+         DELETE FROM mould_attribute WHERE ID=#{0}
+     </delete>
+ </mapper>
