@@ -106,8 +106,8 @@ public class CreateTableController {
 
     public void createData(String sql){
         String driver = "com.mysql.jdbc.Driver";
-        //String url = "jdbc:mysql://114.242.9.143:3306/yun_dev";
-        String url = "jdbc:mysql://localhost:3306/geoserver";
+        String url = "jdbc:mysql://114.242.9.143:3306/yun_dev";
+        //String url = "jdbc:mysql://localhost:3306/geoserver";
         String user = "root";
         String password = "bxlt123456";
         Connection conn = null;
