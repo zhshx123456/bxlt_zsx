@@ -1,0 +1,41 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<title>访问Geoserver发布的地图</title>
+	<meta http-equiv="Access-Control-Allow-Origin" content="*">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<link rel="stylesheet" href="../openlayers/ol/ol.css" type="text/css" media="screen">
+	<script src="../openlayers/ol/ol.js"></script>
+	<script src="../openlayers/ol/ol-debug.js"></script>
+	<script type = 'text/javascript'>
+
+        function init() {
+            var map = new ol.Map({
+                target: 'map_element',
+                layers: [
+                    new ol.layer.Tile({
+                        source: new ol.source.OSM()
+                    }),
+                    new ol.layer.Tile({
+                        source: new ol.source.TileWMS({
+                            url: "http://localhost:8080/geoserver/geoTest/wms?service=WMS&version=1.1.0&request=GetMap&layers=geoTest:geotest&styles=&bbox=116.290374808,40.052695451,116.29752202,40.057737939&width=768&height=541&srs=EPSG:404000&format=application/openlayers"
+                        })
+                    })
+                ],
+                view: new ol.View({
+                    center: [116.29363, 40.05577],
+                    zoom: 10
+                })
+            });
+
+        }
+	</script>
+</head>
+
+<body onload='init();'>
+<div style="position: absolute; top: 50px; left: 80px; width: 300px; height: 100px;">
+	<div id='map_element' style='width:1200px;height:500px;'></div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title>地图服务</title>
+		<link rel="stylesheet" href="../css/ol.css" />
+		<script type="text/javascript" src="../js/openlayers/ol.js"></script>
+		<script type="text/javascript" src="../js/openlayers/jquery.min.js"></script>
+		<script type="text/javascript" src="../js/openlayers/layer.js"></script>
+	</head>
+
+	<body>
+		<div id="map"></div>
+		<form class="form-inline">
+			<label>Geometry type &nbsp;</label>
+			<select id="type">
+				<option value="Point">Point</option>
+				<option value="LineString">LineString</option>
+				<option value="Polygon">Polygon</option>
+				<!--<option value="Circle">Circle</option>
+				<option value="None">None</option>-->
+			</select>
+			<label>险种 &nbsp;</label>
+			<select id="categoryItem">
+				<option value="1">小麦</option>
+				<option value="2">玉米</option>
+				<option value="3">大豆</option>
+			</select>
+		</form>
+		<script>
+			var tile = {
+				moren: new ol.layer.Tile({
+					source: new ol.source.OSM()
+				}),
+				tianditu: new ol.layer.Tile({
+					source: new ol.source.XYZ({
+						url: 'http://t3.tianditu.cn/DataServer?T=cia_w&X={x}&Y={y}&L={z}' //天地图影像 标注3857
+					}),
+					projection: 'EPSG:3857'
+				})
+			};
+			var raster = new ol.layer.Tile({
+				source: new ol.source.OSM()
+			});
+			var source = new ol.source.Vector({
+				wrapX: false
+			});
+			var vector = new ol.layer.Vector({
+				source: source
+			});
+			var map = new ol.Map({
+				target: 'map',
+				layers: [raster, vector],
+				view: new ol.View({
+					zoom: 6,
+					center: [-11000000, 4600000],
+				})
+			});
+			var typeSelect = document.getElementById('type');
+			var value = "Point";
+			var content;
+
+			function drawPolygon() {
+				var polygon = new ol.interaction.Draw({
+					source: source,
+					type: value
+				});
+				polygon.on('drawend', function(evt) {
+                    var wgs84 ="";
+					var feature = evt.feature;
+					var geometry = feature.getGeometry();
+					var coordinate = geometry.getCoordinates(); //多边形坐标
+                    //var coordinate=geometry.getCenter();
+					//alert(coordinate.toString());
+                    var mgs = coordinate.toString().split(",");
+                    for(var i=0;i<mgs.length;i=i+2){
+                        var lon =mgs[i];
+                        var lat =mgs[i+1];
+						var wgs=ol.proj.transform([lon,lat],'EPSG:3857','EPSG:4326');
+						var wgs1=wgs.toString().replace(","," ");
+						wgs84 = wgs84+wgs1+",";
+                    }
+                    wgs84=wgs84.substring(0,wgs84.length-1);
+                    content = wgs84;
+					sendAjax(wgs84,value);
+				});
+				map.addInteraction(polygon);
+			}
+			typeSelect.onchange = function() {
+				value = typeSelect.value;
+				drawPolygon();
+			}
+			function sendAjax(coordinate,geoType) {
+				var categoryItemCode = document.getElementById('categoryItem').value;
+				$.ajax({
+					type: "get",
+					url: "http://localhost:8090/mouldAttribute/findList/" + categoryItemCode,
+                    error: function(error) {
+                        console.log(error);
+                    },
+					success: function(data) {
+						var content = "<div><form id='su' >";
+						var params = "";
+						for(var i = 0; i < data.length; i++) {
+							params+=data[i].maName+":";
+							content += data[i].fieldexplain + "<input id='" + data[i].maName + "' name='" + data[i].maName + "'> ";
+						}
+						content +="<input hidden id='coordinate' name='coordinate' value='"+coordinate+"'>";
+                        content +="<input hidden id='geoType' name='geoType' value='"+geoType+"'>";
+						content += "<input hidden id='params' name='params' value='"+params+"'>";
+						content += "<input type='button' id='tijiao' name='tijiao' value='提交' onclick='sub()'>";
+						content += "</form></div>";
+                        layer.open({
+							type: 1,
+							area: ['600px', '360px'],
+							shadeClose: true, //点击遮罩关闭
+							content: content
+						});
+					}
+				})
+			}
+
+			function sub(){
+				$.ajax({
+					cache: true,
+					type: "get",
+					url:"/createTable/test",
+					data:$('#su').serialize(),// 你的formid
+					async: false,
+					error: function(request) {
+						alert("Connection error:"+request.error);
+					},
+					success: function(data) {
+						alert("SUCCESS!");
+						layer.close(layer.index);
+                        addWms();
+                        startOrie();
+					}
+				});
+			}
+            var wfsVectorLayer="";
+            //加载geoserver发布的地图
+            function addWms(){
+                var lonMax="";
+                var latMax="";
+                var lonMin="";
+                var latMin="";
+				var lonlat = content.toString().split(",");
+				for(var l=0;l<lonlat.length;l++){
+				    var lonlat1 =lonlat[l].split(" ");
+				    if(l==0){
+                        lonMax = lonlat1[0];
+                        latMax = lonlat1[1];
+                        lonMin = lonlat1[0];
+                        latMin = lonlat1[1];
+					}else {
+                        if(parseInt(lonMax)<parseInt(lonlat1[0])){
+                            lonMax = lonlat1[0];
+                        }
+                        if(parseInt(latMax)<parseInt(lonlat1[1])){
+                            latMax = lonlat1[1];
+                        }
+                        if(parseInt(lonMin)>parseInt(lonlat1[0])){
+                            lonMin = lonlat1[0];
+                        }
+                        if(parseInt(latMin)>parseInt(lonlat1[1])){
+                            latMin = lonlat1[1];
+                        }
+					}
+				}
+				var bbox = lonMin+","+latMin+","+lonMax+","+latMax;
+                wfsVectorLayer =  new ol.layer.Tile({
+                    source:new ol.source.TileWMS({
+                        url:'http://localhost:8080/geoserver/geoTest/wms?service=WMS&version=1.1.0&request=GetMap&layers=geoTest:random_data&styles=&bbox='+bbox+'&width=768&height=541&srs=EPSG:404000&ran=' + Math.random(),
+                        projection: 'EPSG:4326',
+                        params:{
+                            'LAYERS':'geoTest:random_data' ,
+                            'VERSION':'1.1.0'
+                        }
+                    })
+                });
+                map.addLayer(wfsVectorLayer);
+                //map.addLayer(googleMapLayerTranffic);
+            }
+            //十秒更新一次数据
+            function startOrie(){
+                //var t=setTimeout("addWms();startOrie();",10000);
+                setTimeout("addWms();startOrie();",10000);
+            }
+		</script>
+	</body>
+
+</html>
