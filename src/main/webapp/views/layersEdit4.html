@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>更新WFS要素</title>
+</head>
+<link href="../css/ol.css">
+<script src="../js/openlayers/ol.js"></script>
+<script src="../js/openlayers/jquery.min.js"></script>
+<body>
+<input type="button" value="查询" onclick="queryWfs();" />
+<input id="select" type="checkbox" value="select" />选择
+<input id="modify" type="checkbox" value="modify" />编辑
+<input id="save" type="button" value="保存" onclick="onSave();" />
+<div id="map" style="height: 70%;">
+</div>
+
+</body>
+
+<script>
+    var modifiedFeatures=null;
+    var wfsVectorLayer = null;
+    var selectInteraction=new ol.interaction.Select({
+        style:new ol.style.Style({
+            stroke:new ol.style.Stroke({
+                color: 'red',
+                width: 2
+            })
+        })
+    });
+    var modifyInteraction = new ol.interaction.Modify({
+        style:new ol.style.Style({
+            stroke:new ol.style.Stroke({
+                color: 'black',
+                width: 2
+            })
+        }),
+        features: selectInteraction.getFeatures()
+    });
+
+
+    var map=new ol.Map({
+        view:new ol.View({
+            projection:'EPSG:4326',
+            center:[129.631215,44.590727],
+            maxZoom: 19,
+            zoom: 6,
+        }),
+        target:'map',
+        layers:[new ol.layer.Tile({
+            source:new ol.source.OSM()
+        })]
+    })
+
+    modifyInteraction.on('modifyend',function (p1) {
+        modifiedFeatures = p1.features;
+    })
+
+    function queryWfs() {
+        // 支持重新查询
+        if (wfsVectorLayer) {
+            map.removeLayer(wfsVectorLayer);
+        }
+
+        // 创建新的图层来加载wfs的要素
+        wfsVectorLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                format: new ol.format.GeoJSON({
+                    geometryName: 'geom' // 将shp格式矢量文件导入PostgreGIS数据库中，对应的表中增加了一个字段名为geom的字段，所有这里的名称就是数据库表中增加的那个字段名称
+                }),                                                                                              //PostgreGIS:xian_polygon为工作空间：图层名
+                url: 'http://localhost:8080/geoserver/geoTest/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geoTest:random_data&maxFeatures=50&outputFormat=application/json&srsname=EPSG:4326'
+            }),
+            style: function(feature, resolution) {
+                return new ol.style.Style({
+                    stroke: new ol.style.Stroke({
+                        color: 'blue',
+                        width: 5
+                    })
+                });
+            }
+        });
+        map.addLayer(wfsVectorLayer);
+    }
+
+    $('#select').change(function() {
+        if (this.checked) {
+            // 勾选选择复选框时，添加选择器到地图
+            map.removeInteraction(selectInteraction);
+            map.addInteraction(selectInteraction);
+        } else {
+            // 不勾选选择复选框的情况下，移出选择器和修改器
+            map.removeInteraction(selectInteraction);
+            document.getElementById('modify').checked = false;
+            map.removeInteraction(modifyInteraction);
+            modifiedFeatures = null;
+        }
+    });
+
+    $('#modify').change(function() {
+        if (this.checked) {
+            // 勾选修改复选框时，添加选择器和修改器到地图
+            document.getElementById('select').checked = true;
+            map.removeInteraction(modifyInteraction);
+            map.addInteraction(modifyInteraction);
+            map.removeInteraction(selectInteraction);
+            map.addInteraction(selectInteraction);
+        } else {
+            // 不勾选修改复选框时，移出修改器
+            map.removeInteraction(modifyInteraction);
+            modifiedFeatures = null;
+        }
+    });
+
+    // 保存已经编辑的要素
+    function onSave() {
+        if (modifiedFeatures && modifiedFeatures.getLength() > 0) {
+
+            // 转换坐标
+            var modifiedFeature = modifiedFeatures.item(0).clone();
+            // 注意ID是必须，通过ID才能找到对应修改的feature
+            modifiedFeature.setId(modifiedFeatures.item(0).getId());
+            // 调换经纬度坐标，以符合wfs协议中经纬度的位置
+            modifiedFeature.getGeometry().applyTransform(function(flatCoordinates, flatCoordinates2, stride) {
+                for (var j = 0; j < flatCoordinates.length; j += stride) {
+                    var y = flatCoordinates[j];
+                    var x = flatCoordinates[j + 1];
+                    flatCoordinates[j] = x;
+                    flatCoordinates[j + 1] = y;
+                }
+            });
+            modifyWfs([modifiedFeature]);
+        }
+    }
+
+    // 把修改提交到服务器端
+    function modifyWfs(features) {
+        var WFSTSerializer = new ol.format.WFS();
+        var featObject = WFSTSerializer.writeTransaction(null,
+            features, null, {
+                featureType: 'random_data',  //图层名
+                featureNS: 'bxlt.geoTest',  // 注意这个值必须为创建工作区时的命名空间URI
+                srsName: 'EPSG:4326'
+            });
+        // 转换为xml内容发送到服务器端
+        var serializer = new XMLSerializer();
+        var featString = serializer.serializeToString(featObject);
+        var request = new XMLHttpRequest();
+        request.open('POST', 'http://localhost:8080/geoserver/geoTest/ows?service=WFS');
+        // 指定内容为xml类型
+        request.setRequestHeader('Content-Type', 'text/xml');
+        request.send(featString);
+    }
+</script>
+</html>

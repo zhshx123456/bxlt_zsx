@@ -188,6 +188,39 @@
                 //var t=setTimeout("addWms();startOrie();",10000);
                 setTimeout("addWms();startOrie();",10000);
             }
+
+
+            // //定义修改几何图形的功能控件
+            // var Modify = {
+            //     init: function(){
+            //         //初始化一个交互选择控件，并添加到地图容器中
+            //         this.select = new ol.interaction.Select();
+            //         map.addInteraction(this.select);
+            //         //初始化一个交互编辑控件，并添加到地图容器中
+            //         this.modify = new ol.interaction.Modify({
+            //             features: this.select.getFeatures()           //选中的要素集
+            //         });
+            //         map.addInteraction(this.modify);
+            //         //设置激活状态变更的处理
+            //         this.setEvents();
+            //     },
+            //     setEvents: function(){
+            //         var selectedFeatures = this.select.getFeatures();       //选中的要素集
+            //         //添加选中要素变更事件
+            //         this.select.on("change:active", function(){
+            //             //遍历选择要素集，返回当前第一个要素（即移除的要素）
+            //             selectedFeatures.forEach(selectedFeatures.remove, selectedFeatures);
+            //         });
+            //     },
+            //     setActive: function(active){
+            //         this.select.setActive(active);                  //激活选择要素控件
+            //         this.modify.setActive(active);                  //激活修改要素控件
+            //     }
+            // };
+            // Modify.init();                          //初始化几何图形修改控件
+            // Modify.setActive(true);                 //激活几何图形修改控件
+
+
 		</script>
 	</body>
 

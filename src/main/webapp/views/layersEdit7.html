@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>OpenLayers Click Event Example</title>
+
+    <link rel="stylesheet" href="../openlayers/theme/default/style.css" type="text/css">
+    <link rel="stylesheet" href="../openlayers/style.css" type="text/css">
+    <script src="../openlayers/OpenLayers.js"></script>
+    <script type="text/javascript">
+        var n=new OpenLayers.Handler.Click(
+            this, {
+                'click': this.trigger
+            }, this.handlerOptions
+        );
+        n.dblclick=function(){return false;};
+        debugger;
+
+        OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
+            defaultHandlerOptions: {
+                'single': true,
+                'double': false,
+                'pixelTolerance': 0,
+                'stopSingle': false,
+                'stopDouble': false
+            },
+
+            initialize: function(options) {
+                this.handlerOptions = OpenLayers.Util.extend(
+                    {}, this.defaultHandlerOptions
+                );
+                OpenLayers.Control.prototype.initialize.apply(
+                    this, arguments
+                );
+                this.handler = n;
+            },
+
+            trigger: function(e) {
+                var lonlat = map.getLonLatFromPixel(e.xy);
+                alert("You clicked near " + lonlat.lat + " N, " +
+                    + lonlat.lon + " E");
+            }
+
+        });
+        var map;
+        function init(){
+            map = new OpenLayers.Map('map');
+
+            var ol_wms = new OpenLayers.Layer.WMS( "OpenLayers WMS",
+                "http://vmap0.tiles.osgeo.org/wms/vmap0?", {layers: 'basic'} );
+
+            var jpl_wms = new OpenLayers.Layer.WMS( "NASA Global Mosaic",
+                "http://t1.hypercube.telascience.org/cgi-bin/landsat7",
+                {layers: "landsat7"});
+
+            jpl_wms.setVisibility(false);
+
+            map.addLayers([ol_wms, jpl_wms]);
+            map.addControl(new OpenLayers.Control.LayerSwitcher());
+            // map.setCenter(new OpenLayers.LonLat(0, 0), 0);
+            map.zoomToMaxExtent();
+
+            var click = new OpenLayers.Control.Click();
+            map.addControl(click);
+            click.activate();
+
+        }
+    </script>
+</head>
+<body onload="init()">
+<h1 id="title">屏蔽单击事件</h1>
+<div id="map" class="smallmap"></div>
+</body>
+</html>

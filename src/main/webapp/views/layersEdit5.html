@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title></title>
+    <script src="../js/openlayers/ol.js"></script>
+    <script src="../openlayers/OpenLayers.js"></script>
+    <script type="text/javascript" src="../js/openlayers/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/openlayers/layer.js"></script>
+    <script type="text/javascript">
+        window.onload = function () {
+
+            var map=new ol.Map({
+                target:'map',
+                view:new ol.View({
+                    projection: 'EPSG:4326',
+                    center:[102.73333,25.05],
+                    zoom:7
+                })
+            });
+
+            var wfsParams = {
+                service : 'WFS',
+                version : '1.0.0',
+                request : 'GetFeature',
+                typeName : 'geoTest:random_data',  //图层名称，可以是单个或多个
+                outputFormat : 'text/javascript',  //重点，不要改变
+                format_options : 'callback:loadFeatures'  //回调函数声明
+            };
+
+            var vectorSource = new ol.source.Vector({
+                format: new ol.format.GeoJSON(),
+                loader: function(extent, resolution, projection) {  //加载函数
+                    var url = 'http://localhost:8080/geoserver/geoTest/ows';
+                    $.ajax({
+                        url: url,
+                        data : $.param(wfsParams),   //传参
+                        type : 'GET',
+                        dataType: 'jsonp',   //解决跨域的关键
+                        jsonpCallback:'loadFeatures'  //回调
+
+                    });
+                },
+                strategy: ol.loadingstrategy.tile(new ol.tilegrid.createXYZ({
+                    maxZoom: 20
+                })),
+                projection: 'EPSG:4326'
+            });
+            //回调函数使用
+            window.loadFeatures = function(response) {
+                vectorSource.addFeatures((new ol.format.GeoJSON()).readFeatures(response));  //载入要素
+
+            };
+            var vectorLayer = new ol.layer.Vector({
+                source: vectorSource
+            });
+            map.addLayer(vectorLayer);
+        };
+
+    </script>
+</head>
+<body>
+<div>
+    <label>修改几何图形：请用鼠标选择修改要素，选中后再修改其几何信息</label>
+</div>
+<div id="map"></div>
+</body>
+</html>

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>绘图和修改</title>
+</head>
+<link href="../css/ol.css" rel="stylesheet" />
+<script src="../js/openlayers/ol.js"></script>
+<script src="../js/openlayers/jquery.min.js"></script>
+<script type="text/javascript" src="../js/openlayers/layer.js"></script>
+<script src="../openlayers/OpenLayers.js"></script>
+
+<body>
+<select id="type">
+    <option value="Point">Point</option>
+    <option value="LineString">LineString</option>
+    <option value="Polygon">Polygon</option>
+    <option value="Circle">Circle</option>
+</select>
+<label>险种 &nbsp;</label>
+<select id="categoryItem">
+    <option value="1">小麦</option>
+    <option value="2">玉米</option>
+    <option value="3">大豆</option>
+</select>
+<input type="button" id="draw" name="name" value="绘图" />
+<input type="button" id="modify" name="name" value="修改" />
+<input type="button" value="查询" onclick="queryWfs();" />
+<!--<input type="button" id="save" name="name" value="保存" />-->
+<div id="map"></div>
+<script>
+    //变量
+    var select;
+    var selectdb;
+    var modify;
+    var draw;
+    var wfsVectorLayer="";
+    var typeSelect = $("#type");
+    var result = false;
+    var content;
+    var sourceTile = new ol.source.OSM();
+    var layerTile = new ol.layer.Tile({
+        source: sourceTile
+    });
+    var sourceVector = new ol.source.Vector();
+    var layerVector = new ol.layer.Vector({
+        source: sourceVector,
+        //样式
+        style: new ol.style.Style({
+            //填充
+            fill: new ol.style.Fill({
+                color: 'rgba(255,255,255,0.2)'
+            }),
+            //笔触
+            stroke: new ol.style.Stroke({
+                color: '#ffcc33',
+                width: 2
+            }),
+            //图像
+            image: new ol.style.Circle({
+                radius: 7,
+                fill: new ol.style.Fill({
+                    color: '#ffcc33'
+                })
+            })
+        })
+    });
+
+    // var wfs = new OpenLayers.Layer.Vector("WFS",{
+    //     strategies : [new OpenLayers.Strategy.Fixed()],
+    //     projection : new OpenLayers.Projection("EPSG:4326"),
+    //     protocol: new OpenLayers.Protocol.WFS({
+    //         version : "1.0.0",
+    //         url : "http://localhost:8080/geoserver/geoTest/ows",
+    //         featureType : "random_data",
+    //         featruePrefix : "geoTest",
+    //         featureNS : "bxlt.geoTest",
+    //         srsName : "EPSG:4326",
+    //         geometryName : "geo"
+    //     })
+    // })
+
+
+    //map函数
+    var map = new ol.Map({
+        layers: [layerTile],
+        view: new ol.View({
+            // 设置成都为地图中心，此处进行坐标转换， 把EPSG:4326的坐标，转换为EPSG:3857坐标，因为ol默认使用的是EPSG:3857坐标
+            center: ol.proj.transform([104.06, 30.67], 'EPSG:4326', 'EPSG:3857'),
+            zoom: 8
+        }),
+        target: 'map'
+    });
+    map.addLayer(layerVector);
+    //map.addLayer(wfs);
+
+    //绘图控件
+    function Draw() {
+        var value = $("#type option:selected").val();
+        draw = new ol.interaction.Draw({
+            source: sourceVector,
+            type: value,
+            wrapX: false,
+            active: false,
+            style: new ol.style.Style({
+                fill: new ol.style.Fill({
+                    color: 'rgba(255, 255, 255, 0.2)'
+                }),
+                stroke: new ol.style.Stroke({
+                    color: '#ffcc33',
+                    width: 2
+                }),
+                image: new ol.style.Circle({
+                    radius: 7,
+                    fill: new ol.style.Fill({
+                        color: '#ffcc33'
+                    })
+                })
+            })
+        });
+        draw.on('drawend', function(evt) {
+            var wgs84 ="";
+            var feature = evt.feature;
+            var geometry = feature.getGeometry();
+            var coordinate = geometry.getCoordinates(); //多边形坐标
+            //var coordinate=geometry.getCenter();
+            //alert(coordinate.toString());
+            var mgs = coordinate.toString().split(",");
+            for(var i=0;i<mgs.length;i=i+2){
+                var lon =mgs[i];
+                var lat =mgs[i+1];
+                var wgs=ol.proj.transform([lon,lat],'EPSG:3857','EPSG:4326');
+                var wgs1=wgs.toString().replace(","," ");
+                wgs84 = wgs84+wgs1+",";
+            }
+            wgs84=wgs84.substring(0,wgs84.length-1);
+            content = wgs84;
+            sendAjax1(wgs84,value);
+        });
+        draw.setActive(result);
+        map.addInteraction(draw);
+    }
+
+
+    //初始化控件
+    function init() {
+        //初始化一个交互选择控件,并添加到地图容器中
+        //select = new ol.interaction.Select({
+        //    condition: ol.events.condition.doubleClick
+       // });
+        //创建一个交互选择对象
+        select = new ol.interaction.Select({
+            //水平包裹
+            //Wrap the world horizontally on the selection overlay
+            wrapX: false
+        });
+        selectdb = new ol.interaction.Select({
+            condition: ol.events.condition.doubleClick,
+            //水平包裹
+            //Wrap the world horizontally on the selection overlay
+            wrapX: false
+        });
+        map.addInteraction(select);
+        map.addInteraction(selectdb);
+        //初始化一个交互编辑控件，并添加到地图容器中
+        modify = new ol.interaction.Modify({
+            features: select.getFeatures()//选中的要素
+        });
+        map.addInteraction(modify);
+        //设置几何图形变更的处理
+        setEvents(select);
+        setEvents(selectdb);
+    };
+    //设置激活变更处理
+    function setEvents(select) {
+        var selectedFeatures = select.getFeatures(); //选中的要素
+        //添加选中要素变更事件
+        select.on('change:active', function () {
+            selectedFeatures.forEach(selectedFeatures.remove, selectedFeatures);
+        });
+    };
+    init();
+    //激活选择控件
+    function setActive(active, select,selectdb, modify) {
+        select.setActive(active);//激活选择要素控件
+        selectdb.setActive(active);//激活选择要素控件
+        modify.setActive(active);//激活修改要素控件
+    };
+    //下拉框改变事件
+    typeSelect.change(function () {
+        map.removeInteraction(draw);
+        Draw();
+    });
+    //绘图工具初始化
+    Draw();
+    //禁用修改控件
+    setActive(false,select,selectdb, modify);
+    $("#draw").click(function () {
+        result = true;
+        Draw();
+        setActive(false,select,selectdb, modify);
+    });
+    $("#modify").click(function () {
+        result = false;
+        //初始化几何图形修改控件
+        setActive(true, select,selectdb, modify); //激活几何图形修改控件;
+        selectdb.on("select",ClickEvent);
+        map.removeInteraction(draw);
+    });
+    function ClickEvent1(e) {
+        var arr=e.target;//获取事件对象，即产生这个事件的元素-->ol.interaction.Select
+
+        var collection = arr.getFeatures();//获取这个事件绑定的features-->返回值是一个ol.Collection对象
+
+        var features = collection.getArray();//获取这个集合的第一个元素-->真正的feature
+        if(features.length>0){
+            var value = $("#type option:selected").val();
+            var wgs84 ="";
+            var geometry = features[0].getGeometry();//获取之前绑定的ID,返回是一个json字符串
+            var coordinate = geometry.getCoordinates(); //多边形坐标
+            var mgs = coordinate.toString().split(",");
+            for(var i=0;i<mgs.length;i=i+2){
+                var lon =mgs[i];
+                var lat =mgs[i+1];
+                var wgs=ol.proj.transform([lon,lat],'EPSG:3857','EPSG:4326');
+                var wgs1=wgs.toString().replace(","," ");
+                wgs84 = wgs84+wgs1+",";
+            }
+            wgs84=wgs84.substring(0,wgs84.length-1);
+            alert(wgs84);
+            sendAjax1(wgs84,value);
+        }
+
+    }
+    // $("#save").click(function () {
+    //     var value = $("#type option:selected").val();
+    //     sendAjax(content,value);
+    // });
+    function sendAjax1(coordinate,geoType) {
+        var categoryItemCode = document.getElementById('categoryItem').value;
+        $.ajax({
+            type: "get",
+            url: "http://localhost:8090/mouldAttribute/findList/" + categoryItemCode,
+            error: function(error) {
+                console.log(error);
+            },
+            success: function(data) {
+                var content = "<div><form id='su' >";
+                var params = "";
+                for(var i = 0; i < data.length; i++) {
+                    params+=data[i].maName+":";
+                    content += data[i].fieldexplain + "<input id='" + data[i].maName + "' name='" + data[i].maName + "'> ";
+                }
+                content += "<input hidden id='id'  name='id' value=''> ";
+                content +="<input hidden id='coordinate' name='coordinate' value='"+coordinate+"'>";
+                content +="<input hidden id='geoType' name='geoType' value='"+geoType+"'>";
+                content += "<input hidden id='params' name='params' value='"+params+"'>";
+                content += "<input type='button' id='tijiao' name='tijiao' value='提交' onclick='sub()'>";
+                content += "</form></div>";
+                layer.open({
+                    type: 1,
+                    area: ['600px', '360px'],
+                    shadeClose: true, //点击遮罩关闭
+                    content: content
+                });
+            }
+        })
+    }
+
+    function ClickEvent(e){
+        var arr=e.target;//获取事件对象，即产生这个事件的元素-->ol.interaction.Select
+        var collection = arr.getFeatures();//获取这个事件绑定的features-->返回值是一个ol.Collection对象
+        var features = collection.getArray();//获取这个集合的第一个元素-->真正的feature
+        if(features.length>0){
+            var wgs84 ="";
+            var geometry = features[0].getGeometry();//获取geometry
+            var coordinate = geometry.getCoordinates(); //多边形坐标
+            var mgs = coordinate.toString().split(",");
+            for(var i=0;i<mgs.length;i=i+2){
+                var lon =mgs[i];
+                var lat =mgs[i+1];
+                var wgs=ol.proj.transform([lon,lat],'EPSG:3857','EPSG:4326');
+                var wgs1=wgs.toString().replace(","," ");
+                wgs84 = wgs84+wgs1+",";
+            }
+            wgs84=wgs84.substring(0,wgs84.length-1);
+            var geoType = "";
+            if("MultiPolygon"==geometry.getType()){
+                geoType = "Polygon"
+            }
+            sendAjax(wgs84,geoType,features[0].getProperties());
+        }
+    }
+
+    function sendAjax(coordinate,geoType,feature) {
+        var categoryItemCode = document.getElementById('categoryItem').value;
+        $.ajax({
+            type: "get",
+            url: "http://localhost:8090/mouldAttribute/findList/" + categoryItemCode,
+            error: function(error) {
+                console.log(error);
+            },
+            success: function(data) {
+                var content = "<div><form id='su' >";
+                var params = "";
+                for(var i = 0; i < data.length; i++) {
+                    var dataValue = "";
+                    for(var key in feature){
+                        if(key==data[i].maName){
+                            dataValue = feature[key];
+                        }
+                    }
+                    params+=data[i].maName+":";
+                    content += data[i].fieldexplain + "<input id='" + data[i].maName + "' name='" + data[i].maName + "' value='"+dataValue+"'> ";
+                }
+                content += "<input hidden id='id'  name='id' value='"+feature.id+"'> ";
+                content +="<input hidden id='coordinate' name='coordinate' value='"+coordinate+"'>";
+                content +="<input hidden id='geoType' name='geoType' value='"+geoType+"'>";
+                content += "<input hidden id='params' name='params' value='"+params+"'>";
+                content += "<input type='button' id='tijiao' name='tijiao' value='提交' onclick='sub()'>";
+                content += "</form></div>";
+                layer.open({
+                    type: 1,
+                    area: ['600px', '360px'],
+                    shadeClose: true, //点击遮罩关闭
+                    content: content
+                });
+            }
+        })
+    }
+
+    function sub(){
+        $.ajax({
+            cache: true,
+            type: "get",
+            url:"/createTable/test",
+            data:$('#su').serialize(),// 你的formid
+            async: false,
+            error: function(request) {
+                alert("Connection error:"+request.error);
+            },
+            success: function(data) {
+                alert("SUCCESS!");
+                layer.close(layer.index);
+                //addWms();
+                //startOrie();
+            }
+        });
+    }
+
+
+    function queryWfs() {
+        // 支持重新查询
+        if (wfsVectorLayer) {
+            map.removeLayer(wfsVectorLayer);
+        }
+        //setActive(false,select,selectdb, modify);
+
+        // 创建新的图层来加载wfs的要素
+        wfsVectorLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                format: new ol.format.GeoJSON({
+                    geometryName: 'geom' // 将shp格式矢量文件导入PostgreGIS数据库中，对应的表中增加了一个字段名为geom的字段，所有这里的名称就是数据库表中增加的那个字段名称
+                }),                                                                                              //PostgreGIS:xian_polygon为工作空间：图层名
+                url: 'http://localhost:8080/geoserver/geoTest/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geoTest:random_data&maxFeatures=50&outputFormat=application/json&srsname=EPSG:4326'
+            })
+            // ,
+            // style: function(feature, resolution) {
+            //     return new ol.style.Style({
+            //         stroke: new ol.style.Stroke({
+            //             color: 'blue',
+            //             width: 5
+            //         })
+            //     });
+            // }
+        });
+        map.addLayer(wfsVectorLayer);
+    }
+
+
+
+    //加载geoserver发布的地图
+    function addWms(){
+        var lonMax="";
+        var latMax="";
+        var lonMin="";
+        var latMin="";
+        var lonlat = content.toString().split(",");
+        for(var l=0;l<lonlat.length;l++){
+            var lonlat1 =lonlat[l].split(" ");
+            if(l==0){
+                lonMax = lonlat1[0];
+                latMax = lonlat1[1];
+                lonMin = lonlat1[0];
+                latMin = lonlat1[1];
+            }else {
+                if(parseInt(lonMax)<parseInt(lonlat1[0])){
+                    lonMax = lonlat1[0];
+                }
+                if(parseInt(latMax)<parseInt(lonlat1[1])){
+                    latMax = lonlat1[1];
+                }
+                if(parseInt(lonMin)>parseInt(lonlat1[0])){
+                    lonMin = lonlat1[0];
+                }
+                if(parseInt(latMin)>parseInt(lonlat1[1])){
+                    latMin = lonlat1[1];
+                }
+            }
+        }
+        var bbox = lonMin+","+latMin+","+lonMax+","+latMax;
+        wfsVectorLayer =  new ol.layer.Tile({
+            source:new ol.source.TileWMS({
+                url:'http://localhost:8080/geoserver/geoTest/wms?service=WMS&version=1.1.0&request=GetMap&layers=geoTest:random_data&styles=&bbox='+bbox+'&width=768&height=541&srs=EPSG:404000&ran=' + Math.random(),
+                projection: 'EPSG:4326',
+                params:{
+                    'LAYERS':'geoTest:random_data' ,
+                    'VERSION':'1.1.0'
+                }
+            })
+        });
+        map.addLayer(wfsVectorLayer);
+    }
+    //startOrie()
+    function addWms1(){
+        var wfs = new OpenLayers.Layer.Vector("WFS",{
+            strategies : [new OpenLayers.Strategy.Fixed()],
+            projection : new OpenLayers.Projection("EPSG:4326"),
+            protocol: new OpenLayers.Protocol.WFS({
+                version : "1.0.0",
+                url:"http://localhost:8080/geoserver/geoTest/wfs",
+                featureType:"random_data",
+                featruePrefix:"geoTest",
+                featureNS:"bxlt.geoTest",
+                srsName:"EPSG:4326",
+                geometryName:"testWfs"
+            })
+        })
+    }
+
+    //十秒更新一次数据
+    function startOrie(){
+        //var t=setTimeout("addWms();startOrie();",10000);
+        setTimeout("addWms();startOrie();",10000);
+    }
+
+</script>
+</body>
+</html>

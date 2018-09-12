@@ -48,57 +48,63 @@ public class CreateTableController {
         //String sql = "create table random_data( id int(32),ND0 int(32),ND1 int(32),ND2 int(32),ND3 int(32),ND4 int(32),ND5 int(32),ND6 int(32) );";
         // "insert into random_data( id,ND0,ND1,ND2,ND3,ND4,ND5,ND6) values('3','2','4','1','0','3','2');";
         //ResultSet rs = statement.executeQuery(sql);
-        String params = request.getParameter("params");
+        String params = request.getParameter("params");//获取页面参数
         String ps[] = params.split(":");
-        StringBuffer sql = new StringBuffer();
+        StringBuffer sql = new StringBuffer();//如果没有表则创建
         sql.append(" create table IF NOT EXISTS random_data( id varchar(32),") ;
         for(int i=0;i<ps.length;i++){
-            //String columnValue = request.getParameter(ps[i]);
             sql.append(ps[i]+"  varchar(32), ") ;
         }
         sql.append("geo geometry);" );
 
-        StringBuffer sql2 = new StringBuffer();
-        String id=UUID.randomUUID().toString().replaceAll("-", "");
+        StringBuffer sql2 = new StringBuffer();//添加或修改数据
+        String id = request.getParameter("id");
         String geo = request.getParameter("coordinate");
-        sql2.append("insert into random_data( id,") ;
-        for(int i=0;i<ps.length;i++){
-            sql2.append(ps[i]+", ") ;
-        }
-        sql2.append("geo) values('" +id+"','");
-        for(int i=0;i<ps.length;i++){
-            String columnValue = request.getParameter(ps[i]);
-            if(i==ps.length-1){
-                sql2.append(columnValue+"', ");
-            }else{
-                sql2.append(columnValue+"', '") ;
+        if("".equals(id)||null==id){
+            String newid=UUID.randomUUID().toString().replaceAll("-", "");
+            sql2.append("insert into random_data( id,") ;
+            for(int i=0;i<ps.length;i++){
+                sql2.append(ps[i]+", ") ;
             }
+            sql2.append("geo) values('" +newid+"','");
+            for(int i=0;i<ps.length;i++){
+                String columnValue = request.getParameter(ps[i]);
+                if(i==ps.length-1){
+                    sql2.append(columnValue+"', ");
+                }else{
+                    sql2.append(columnValue+"', '") ;
+                }
+            }
+            String geoType = request.getParameter("geoType");
+            String type = "";
+            if("Point".equals(geoType)){
+                type = "POINT ("+geo+")";
+            }else if("LineString".equals(geoType)){
+                type = "LINESTRING ("+geo+")";
+            }else if("Polygon".equals(geoType)){
+                type = "MULTIPOLYGON ((("+geo+")))";
+            }
+            sql2.append("ST_GeomFromText('"+type+"'));" );
+        }else{
+            sql2.append("update random_data set ") ;
+            for(int i=0;i<ps.length;i++){
+                String columnValue = request.getParameter(ps[i]);
+                if("id"!=ps[i])
+                    sql2.append(ps[i]+" = '"+columnValue+"',") ;
+            }
+            String geoType = request.getParameter("geoType");
+            String type = "";
+            if("Point".equals(geoType)){
+                type = "POINT ("+geo+")";
+            }else if("LineString".equals(geoType)){
+                type = "LINESTRING ("+geo+")";
+            }else if("Polygon".equals(geoType)){
+                type = "MULTIPOLYGON ((("+geo+")))";
+            }
+            sql2.append(" geo=ST_GeomFromText('"+type+"') " );
+            sql2.append(" where id='"+id +"'");
         }
-//        String mgs[] = geo.split(",");
-//        String wgs84 ="";
-//        for(int i=0;i<mgs.length;i=i+2){
-//            double lon =Double.parseDouble(mgs[i]);
-//            double lat =Double.parseDouble(mgs[i+1]);
-//            try {
-//                double wgs[]= this.convert(lon,lat,"EPSG:3857");
-//                wgs84 = wgs84+wgs[0]+" "+wgs[1]+",";
-//            } catch (FactoryException e) {
-//                e.printStackTrace();
-//            } catch (TransformException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//        wgs84 = wgs84.substring(0,wgs84.length()-1);
-        String geoType = request.getParameter("geoType");
-        String type = "";
-        if("Point".equals(geoType)){
-            type = "POINT ("+geo+")";
-        }else if("LineString".equals(geoType)){
-            type = "LINESTRING ("+geo+")";
-        }else if("Polygon".equals(geoType)){
-            type = "MULTIPOLYGON ((("+geo+")))";
-        }
-        sql2.append("ST_GeomFromText('"+type+"'));" );
+
 
         this.createData(sql.toString());//创建表
         this.createData(sql2.toString());//添加数据
@@ -229,6 +235,7 @@ public class CreateTableController {
         return targetCoord;
     }
 
+    //连接数据库、操作数据
     public void createData(String sql){
         String driver = "com.mysql.jdbc.Driver";
         String url = "jdbc:mysql://114.242.9.143:3306/yun_dev";

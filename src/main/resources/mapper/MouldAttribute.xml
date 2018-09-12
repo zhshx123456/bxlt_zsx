@@ -18,7 +18,7 @@
      </select>
 
      <select id="findList" resultMap="BaseResultMap">
-         SELECT maName,fieldtype,fieldexplain FROM mould_attribute where typeId=#{0}
+         SELECT id,maName,fieldtype,fieldexplain FROM mould_attribute where typeId=#{0}
      </select>
 
      <delete id="delete" parameterType="String">
