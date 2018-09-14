@@ -51,9 +51,9 @@ public class CreateTableController {
         String params = request.getParameter("params");//获取页面参数
         String ps[] = params.split(":");
         StringBuffer sql = new StringBuffer();//如果没有表则创建
-        sql.append(" create table IF NOT EXISTS random_data( id varchar(32),") ;
+        sql.append(" create table IF NOT EXISTS random_data( id varchar(32),");
         for(int i=0;i<ps.length;i++){
-            sql.append(ps[i]+"  varchar(32), ") ;
+            sql.append(ps[i]+"  varchar(32), ");
         }
         sql.append("geo geometry);" );
 
@@ -62,9 +62,9 @@ public class CreateTableController {
         String geo = request.getParameter("coordinate");
         if("".equals(id)||null==id){
             String newid=UUID.randomUUID().toString().replaceAll("-", "");
-            sql2.append("insert into random_data( id,") ;
+            sql2.append("insert into random_data( id,");
             for(int i=0;i<ps.length;i++){
-                sql2.append(ps[i]+", ") ;
+                sql2.append(ps[i]+", ");
             }
             sql2.append("geo) values('" +newid+"','");
             for(int i=0;i<ps.length;i++){
@@ -72,7 +72,7 @@ public class CreateTableController {
                 if(i==ps.length-1){
                     sql2.append(columnValue+"', ");
                 }else{
-                    sql2.append(columnValue+"', '") ;
+                    sql2.append(columnValue+"', '");
                 }
             }
             String geoType = request.getParameter("geoType");
@@ -86,11 +86,11 @@ public class CreateTableController {
             }
             sql2.append("ST_GeomFromText('"+type+"'));" );
         }else{
-            sql2.append("update random_data set ") ;
+            sql2.append("update random_data set ");
             for(int i=0;i<ps.length;i++){
                 String columnValue = request.getParameter(ps[i]);
                 if("id"!=ps[i])
-                    sql2.append(ps[i]+" = '"+columnValue+"',") ;
+                    sql2.append(ps[i]+" = '"+columnValue+"',");
             }
             String geoType = request.getParameter("geoType");
             String type = "";
@@ -107,7 +107,7 @@ public class CreateTableController {
 
 
         this.createData(sql.toString());//创建表
-        this.createData(sql2.toString());//添加数据
+        this.createData(sql2.toString());//添加或修改数据
 
         //上面是入库
         //----------------------------分割线--------------------------------
