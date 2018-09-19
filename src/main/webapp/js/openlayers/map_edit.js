@@ -852,7 +852,6 @@ var sendAjax = function(feature,entity){
             entity.params=params;
             entity.paramsC=paramsC;
             feature.setProperties(entity);
-            content += "<input hidden id=";
             content += "<input hidden id='coordinate' name='coordinate' value='"+dataFormat.toWKT(feature)+"'>";
             content += "<input hidden id='geoType' name='geoType' value='"+geoType+"'>";
             content += "<input hidden id='params' name='params' value='"+params+"'>";
