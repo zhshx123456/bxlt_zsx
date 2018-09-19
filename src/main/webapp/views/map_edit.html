@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<link rel="stylesheet" href="../css/ol.css" />
+		<script type="text/javascript" src="../js/openlayers/ol.js"></script>
+		<script type="text/javascript" src="../js/openlayers/jquery.min.js"></script>
+		<script type="text/javascript" src="../js/openlayers/jsts.min.js" ></script>
+		<script type="text/javascript" src="../js/openlayers/turf.min.js" ></script>
+		<script type="text/javascript" src="../js/openlayers/layer.js"></script>
+		<style>
+			.imglist li {
+				float: left;
+				width: 90px;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div>
+			<ul class="imglist">
+				<li id="btnDrawShape">
+					<a href="#">
+						<span>勾画地块</span>
+					</a>
+				</li>
+				<li id="btnEditUser">
+					<a href="#">
+						<i id="userInner" class="edit"></i>
+						<span>标注农户</span>
+					</a>
+				</li>
+				<!--<li id="btnQueryShape" style="border-right:1px solid #ccc">
+					<a href="#">
+						<span>查询地块</span>
+					</a>
+				</li>-->
+				<li id="btnSelectShape">
+					<a href="#">
+						<span>选择地块</span>
+					</a>
+				</li>
+				<!--<li id="btnChange">
+					<a href="#">
+						<span>转投保</span>
+					</a>
+
+				</li>
+				<li id="btnDeleteShape">
+					<a href="#">
+						<span>删除地块</span>
+					</a>
+				</li>-->
+				<li id="btnSplitShape">
+					<a href="#">
+						<i class="cut"></i>
+						<span>分割地块</span>
+					</a>
+				</li>
+				<li id="btnCombine" style="border-right:1px solid #ccc">
+					<a href="#">
+						<span>合并地块</span>
+					</a>
+				</li>
+			</ul>
+		</div>
+		<div id="map" name="map">
+		</div>
+		<script type="text/javascript" src="../js/openlayers/map_edit.js"></script>
+		<script type="text/javascript">
+			$(function () {
+				aimsMap.addDrawAbilty();
+            });
+		</script>
+	</body>
+</html>
