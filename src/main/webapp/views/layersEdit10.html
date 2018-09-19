@@ -83,22 +83,6 @@
         features: select.getFeatures()//选中的要素
     });
 
-
-    // var wfs = new OpenLayers.Layer.Vector("WFS",{
-    //     strategies : [new OpenLayers.Strategy.Fixed()],
-    //     projection : new OpenLayers.Projection("EPSG:4326"),
-    //     protocol: new OpenLayers.Protocol.WFS({
-    //         version : "1.0.0",
-    //         url : "http://localhost:8080/geoserver/geoTest/ows",
-    //         featureType : "random_data",
-    //         featruePrefix : "geoTest",
-    //         featureNS : "bxlt.geoTest",
-    //         srsName : "EPSG:4326",
-    //         geometryName : "geo"
-    //     })
-    // })
-
-
     //map函数
     var map = new ol.Map({
         layers: [layerTile],
@@ -120,8 +104,6 @@
     setEvents(select);
     setEvents(selectdbk);
     queryWfs();
-    //map.addLayer(layerVector);
-    //map.addLayer(wfs);
 
     //绘图控件
     function Draw() {
@@ -152,8 +134,6 @@
             var feature = evt.feature;
             var geometry = feature.getGeometry();
             var coordinate = geometry.getCoordinates(); //多边形坐标
-            //var coordinate=geometry.getCenter();
-            //alert(coordinate.toString());
             var mgs = coordinate.toString().split(",");
             for(var i=0;i<mgs.length;i=i+2){
                 var lon =mgs[i];
@@ -170,16 +150,6 @@
         map.addInteraction(draw);
     }
 
-
-    // //初始化控件
-    // function init() {
-    //     //初始化一个交互选择控件,并添加到地图容器中
-    //     //select = new ol.interaction.Select({
-    //     //    condition: ol.events.condition.doubleClick
-    //    // });
-    //
-    //
-    // };
     //设置激活变更处理
     function setEvents(select) {
         var selectedFeatures = select.getFeatures(); //选中的要素
@@ -242,10 +212,7 @@
         }
 
     }
-    // $("#save").click(function () {
-    //     var value = $("#type option:selected").val();
-    //     sendAjax(content,value);
-    // });
+
     function sendAjax1(coordinate,geoType) {
         var categoryItemCode = document.getElementById('categoryItem').value;
         $.ajax({
